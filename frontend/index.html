@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Employee Management API</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0c10;
+    --bg2: #111318;
+    --bg3: #181b22;
+    --bg4: #1e2229;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #f0f2f5;
+    --text2: #8b929e;
+    --text3: #5a6272;
+    --accent: #6366f1;
+    --accent2: #818cf8;
+    --accent-bg: rgba(99,102,241,0.12);
+    --green: #22c55e;
+    --green-bg: rgba(34,197,94,0.1);
+    --amber: #f59e0b;
+    --amber-bg: rgba(245,158,11,0.1);
+    --red: #ef4444;
+    --red-bg: rgba(239,68,68,0.1);
+    --blue: #3b82f6;
+    --blue-bg: rgba(59,130,246,0.1);
+    --radius: 10px;
+    --radius-lg: 14px;
+    --sidebar-w: 220px;
+    --font: 'Inter', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  }
+
+  body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+  /* ── Layout ── */
+  .app { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: var(--sidebar-w); background: var(--bg2); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh;
+    z-index: 100; transition: transform 0.25s;
+  }
+  .sidebar-logo {
+    padding: 20px 18px 16px; display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo-icon {
+    width: 32px; height: 32px; background: var(--accent); border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .logo-icon svg { width: 18px; height: 18px; stroke: white; fill: none; stroke-width: 2; stroke-linecap: round; }
+  .logo-text { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.2; }
+  .logo-sub { font-size: 10px; color: var(--text3); font-weight: 400; }
+
+  .sidebar-nav { flex: 1; padding: 12px 10px; overflow-y: auto; }
+  .nav-section { margin-bottom: 20px; }
+  .nav-label { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase;
+    letter-spacing: 0.08em; padding: 0 8px; margin-bottom: 4px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px;
+    cursor: pointer; transition: background 0.15s, color 0.15s; color: var(--text2);
+    font-size: 13.5px; font-weight: 450; margin-bottom: 2px; border: none; background: none;
+    width: 100%; text-align: left;
+  }
+  .nav-item:hover { background: var(--bg3); color: var(--text); }
+  .nav-item.active { background: var(--accent-bg); color: var(--accent2); }
+  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .nav-badge {
+    margin-left: auto; background: var(--accent-bg); color: var(--accent2);
+    font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 99px;
+  }
+
+  .sidebar-footer { padding: 14px 10px; border-top: 1px solid var(--border); }
+  .user-card {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .user-card:hover { background: var(--bg3); }
+  .avatar {
+    width: 30px; height: 30px; border-radius: 50%; background: var(--accent);
+    display: flex; align-items: center; justify-content: center; font-size: 11px;
+    font-weight: 600; color: white; flex-shrink: 0;
+  }
+  .user-info { flex: 1; min-width: 0; }
+  .user-name { font-size: 12.5px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .user-role { font-size: 10.5px; color: var(--text3); }
+
+  .main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+  .topbar {
+    padding: 16px 28px; border-bottom: 1px solid var(--border); background: var(--bg2);
+    display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 50;
+  }
+  .page-title { font-size: 16px; font-weight: 600; }
+  .page-sub { font-size: 12px; color: var(--text3); margin-top: 1px; }
+  .topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .content { padding: 28px; flex: 1; }
+
+  /* ── Auth Screen ── */
+  .auth-screen {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: var(--bg); padding: 20px;
+  }
+  .auth-card {
+    width: 100%; max-width: 400px; background: var(--bg2); border: 1px solid var(--border2);
+    border-radius: var(--radius-lg); padding: 36px 32px; box-shadow: var(--shadow);
+  }
+  .auth-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+  .auth-title { font-size: 22px; font-weight: 700; }
+  .auth-sub { font-size: 13px; color: var(--text2); margin-top: 4px; }
+  .auth-demo {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 14px 16px; margin-bottom: 24px;
+  }
+  .auth-demo-title { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; margin-bottom: 8px; }
+  .cred-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .cred-badge {
+    font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; min-width: 40px; text-align: center;
+  }
+  .cred-badge.admin { background: var(--accent-bg); color: var(--accent2); }
+  .cred-badge.user { background: var(--green-bg); color: var(--green); }
+  .cred-text { font-family: var(--mono); font-size: 11.5px; color: var(--text2); }
+
+  /* ── Forms ── */
+  .form-group { margin-bottom: 16px; }
+  label { display: block; font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 6px; }
+  input, select, textarea {
+    width: 100%; background: var(--bg3); border: 1px solid var(--border2); border-radius: 8px;
+    padding: 9px 13px; font-size: 13.5px; color: var(--text); font-family: var(--font);
+    outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent); box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+  }
+  input::placeholder { color: var(--text3); }
+  select option { background: var(--bg3); }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 8px;
+    font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s;
+    white-space: nowrap; font-family: var(--font);
+  }
+  .btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: #4f46e5; transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border2); }
+  .btn-ghost:hover { background: var(--bg3); color: var(--text); }
+  .btn-danger { background: var(--red-bg); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
+  .btn-danger:hover { background: rgba(239,68,68,0.2); }
+  .btn-sm { padding: 5px 11px; font-size: 12px; }
+  .btn-full { width: 100%; justify-content: center; padding: 10px; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg);
+    padding: 20px 22px;
+  }
+  .card-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .card-sub { font-size: 12px; color: var(--text3); }
+
+  /* ── Stats Grid ── */
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg);
+    padding: 18px 20px; position: relative; overflow: hidden;
+  }
+  .stat-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--accent-color, var(--accent));
+  }
+  .stat-icon {
+    width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center;
+    justify-content: center; margin-bottom: 12px; background: var(--icon-bg, var(--accent-bg));
+  }
+  .stat-icon svg { width: 17px; height: 17px; stroke: var(--icon-color, var(--accent2)); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .stat-value { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+  .stat-label { font-size: 12px; color: var(--text3); margin-top: 3px; }
+  .stat-delta { font-size: 11px; margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+  .delta-up { color: var(--green); }
+  .delta-tag { background: var(--green-bg); color: var(--green); padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+
+  /* ── Table ── */
+  .table-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+  .table-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .search-box { position: relative; flex: 1; min-width: 200px; }
+  .search-box svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; stroke: var(--text3); fill: none; stroke-width: 2; stroke-linecap: round; }
+  .search-box input { padding-left: 34px; background: var(--bg3); }
+  .filter-row { display: flex; gap: 8px; }
+  .filter-row select { background: var(--bg3); width: auto; font-size: 12.5px; padding: 7px 12px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    padding: 11px 16px; text-align: left; font-size: 11px; font-weight: 600;
+    color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em;
+    background: var(--bg3); border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  thead th.sortable { cursor: pointer; user-select: none; }
+  thead th.sortable:hover { color: var(--text2); }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--bg3); }
+  tbody td { padding: 13px 16px; vertical-align: middle; }
+  .td-name { display: flex; align-items: center; gap: 10px; }
+  .td-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+  .td-main { font-weight: 500; color: var(--text); }
+  .td-sub { font-size: 11.5px; color: var(--text3); margin-top: 1px; }
+
+  /* ── Badges ── */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px;
+    border-radius: 99px; font-size: 11px; font-weight: 500; white-space: nowrap;
+  }
+  .badge-dot { width: 5px; height: 5px; border-radius: 50%; }
+  .badge-active { background: var(--green-bg); color: var(--green); }
+  .badge-active .badge-dot { background: var(--green); }
+  .badge-inactive { background: var(--bg4); color: var(--text3); }
+  .badge-inactive .badge-dot { background: var(--text3); }
+  .badge-leave { background: var(--amber-bg); color: var(--amber); }
+  .badge-leave .badge-dot { background: var(--amber); }
+  .badge-terminated { background: var(--red-bg); color: var(--red); }
+  .badge-terminated .badge-dot { background: var(--red); }
+
+  /* ── Dept badge ── */
+  .dept-badge { display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: 11px; font-weight: 500; }
+
+  /* ── Pagination ── */
+  .pagination { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-top: 1px solid var(--border); }
+  .page-info { font-size: 12.5px; color: var(--text3); }
+  .page-btns { display: flex; gap: 4px; }
+  .page-btn {
+    width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--border2);
+    background: transparent; color: var(--text2); font-size: 12px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: all 0.1s;
+  }
+  .page-btn:hover { background: var(--bg3); color: var(--text); }
+  .page-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+  .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .page-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ── Modal ── */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+    backdrop-filter: blur(4px);
+  }
+  .modal {
+    background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--radius-lg);
+    width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6); animation: modalIn 0.2s ease;
+  }
+  @keyframes modalIn { from { opacity: 0; transform: scale(0.96) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+  .modal-head { padding: 20px 24px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: space-between; }
+  .modal-title { font-size: 16px; font-weight: 600; }
+  .modal-sub { font-size: 12px; color: var(--text3); margin-top: 3px; }
+  .modal-close { background: none; border: none; color: var(--text3); cursor: pointer; padding: 4px; border-radius: 5px; transition: background 0.1s; }
+  .modal-close:hover { background: var(--bg3); color: var(--text); }
+  .modal-close svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
+  .modal-body { padding: 20px 24px; }
+  .modal-foot { padding: 14px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-full { grid-column: span 2; }
+
+  /* ── Charts ── */
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .chart-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; }
+  .chart-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .chart-sub { font-size: 11.5px; color: var(--text3); margin-bottom: 16px; }
+  .chart-wrap { position: relative; height: 200px; }
+
+  /* ── Toast ── */
+  .toast-container { position: fixed; top: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; }
+  .toast {
+    background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius);
+    padding: 12px 16px; display: flex; align-items: center; gap: 10px; min-width: 260px;
+    box-shadow: var(--shadow); animation: toastIn 0.25s ease;
+    font-size: 13px;
+  }
+  @keyframes toastIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+  .toast.success { border-left: 3px solid var(--green); }
+  .toast.error { border-left: 3px solid var(--red); }
+  .toast-icon svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+  .toast.success .toast-icon { color: var(--green); }
+  .toast.error .toast-icon { color: var(--red); }
+
+  /* ── Empty / Loading ── */
+  .empty { text-align: center; padding: 60px 20px; color: var(--text3); }
+  .empty svg { width: 40px; height: 40px; stroke: var(--text3); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; margin-bottom: 12px; opacity: 0.5; }
+  .empty p { font-size: 14px; margin-bottom: 4px; color: var(--text2); }
+  .empty span { font-size: 12px; }
+  .loading { display: flex; align-items: center; justify-content: center; padding: 60px; gap: 10px; color: var(--text3); font-size: 13px; }
+  .spinner { width: 18px; height: 18px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Recent list ── */
+  .recent-list { display: flex; flex-direction: column; gap: 1px; }
+  .recent-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; transition: background 0.1s; cursor: default; }
+  .recent-item:hover { background: var(--bg3); }
+
+  /* ── Dept rows ── */
+  .dept-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .dept-row:last-child { border-bottom: none; }
+  .dept-bar-wrap { flex: 1; height: 4px; background: var(--bg3); border-radius: 99px; overflow: hidden; }
+  .dept-bar { height: 100%; background: var(--accent); border-radius: 99px; transition: width 0.6s ease; }
+  .dept-name { font-size: 12.5px; font-weight: 500; min-width: 100px; }
+  .dept-count { font-size: 12px; color: var(--text3); min-width: 30px; text-align: right; }
+
+  /* ── Delete confirm ── */
+  .confirm-icon { width: 48px; height: 48px; border-radius: 12px; background: var(--red-bg); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+  .confirm-icon svg { width: 24px; height: 24px; stroke: var(--red); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ── Details panel ── */
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .detail-item label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+  .detail-item .val { font-size: 14px; color: var(--text); font-weight: 450; }
+
+  /* ── API Docs ── */
+  .endpoint-list { display: flex; flex-direction: column; gap: 8px; }
+  .endpoint {
+    display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+    background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius);
+    font-family: var(--mono); font-size: 12.5px;
+  }
+  .method { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; min-width: 50px; text-align: center; }
+  .method.get { background: var(--blue-bg); color: var(--blue); }
+  .method.post { background: var(--green-bg); color: var(--green); }
+  .method.put { background: var(--amber-bg); color: var(--amber); }
+  .method.delete { background: var(--red-bg); color: var(--red); }
+  .endpoint-path { color: var(--text); flex: 1; }
+  .endpoint-desc { font-family: var(--font); font-size: 12px; color: var(--text3); }
+  .endpoint-auth { font-size: 10px; padding: 2px 6px; border-radius: 3px; background: var(--accent-bg); color: var(--accent2); font-family: var(--font); font-weight: 600; }
+
+  .section-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .section-title svg { width: 16px; height: 16px; stroke: var(--accent2); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  @media (max-width: 900px) {
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .charts-grid { grid-template-columns: 1fr; }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-full { grid-column: span 1; }
+  }
+  @media (max-width: 680px) {
+    .sidebar { transform: translateX(-100%); }
+    .sidebar.open { transform: translateX(0); }
+    .main { margin-left: 0; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+<div class="toast-container" id="toasts"></div>
+
+<script>
+// ── Toast System ──────────────────────────────────────────────────────────
+function toast(msg, type = 'success') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `
+    <span class="toast-icon">
+      ${type === 'success'
+        ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>'
+        : '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'}
+    </span>
+    <span>${msg}</span>`;
+  const container = document.getElementById('toasts');
+  container.appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateX(20px)'; el.style.transition = 'all 0.3s'; setTimeout(() => el.remove(), 300); }, 3000);
+}
+
+// ── Mock State ──────────────────────────────────────────────────────────────
+let authUser = null;
+let activeView = 'dashboard';
+let employees = [
+  { id: 1, firstName: 'Sarah', lastName: 'Johnson', email: 'sarah.johnson@company.com', department: 'Engineering', jobTitle: 'Senior Software Engineer', salary: 95000, hireDate: '2020-03-15', status: 'ACTIVE', phone: '+1-555-0101' },
+  { id: 2, firstName: 'Marcus', lastName: 'Chen', email: 'marcus.chen@company.com', department: 'Engineering', jobTitle: 'Backend Developer', salary: 82000, hireDate: '2021-07-01', status: 'ACTIVE', phone: '+1-555-0102' },
+  { id: 3, firstName: 'Priya', lastName: 'Patel', email: 'priya.patel@company.com', department: 'Product', jobTitle: 'Product Manager', salary: 105000, hireDate: '2019-11-20', status: 'ACTIVE', phone: '+1-555-0103' },
+  { id: 4, firstName: 'James', lastName: 'Wilson', email: 'james.wilson@company.com', department: 'Sales', jobTitle: 'Sales Director', salary: 120000, hireDate: '2018-05-10', status: 'ACTIVE', phone: '+1-555-0104' },
+  { id: 5, firstName: 'Emily', lastName: 'Rodriguez', email: 'emily.rodriguez@company.com', department: 'HR', jobTitle: 'HR Manager', salary: 78000, hireDate: '2020-09-08', status: 'ACTIVE', phone: '+1-555-0105' },
+  { id: 6, firstName: 'David', lastName: 'Kim', email: 'david.kim@company.com', department: 'Engineering', jobTitle: 'DevOps Engineer', salary: 90000, hireDate: '2022-01-17', status: 'ACTIVE', phone: '+1-555-0106' },
+  { id: 7, firstName: 'Aisha', lastName: 'Thompson', email: 'aisha.thompson@company.com', department: 'Marketing', jobTitle: 'Marketing Lead', salary: 72000, hireDate: '2021-04-05', status: 'ACTIVE', phone: '+1-555-0107' },
+  { id: 8, firstName: 'Carlos', lastName: 'Mendoza', email: 'carlos.mendoza@company.com', department: 'Finance', jobTitle: 'Financial Analyst', salary: 85000, hireDate: '2019-08-22', status: 'ON_LEAVE', phone: '+1-555-0108' },
+  { id: 9, firstName: 'Nina', lastName: 'Okafor', email: 'nina.okafor@company.com', department: 'Product', jobTitle: 'UX Designer', salary: 88000, hireDate: '2022-06-13', status: 'ACTIVE', phone: '+1-555-0109' },
+  { id: 10, firstName: 'Robert', lastName: 'Anderson', email: 'robert.anderson@company.com', department: 'Sales', jobTitle: 'Account Executive', salary: 68000, hireDate: '2023-02-28', status: 'ACTIVE', phone: '+1-555-0110' },
+  { id: 11, firstName: 'Lisa', lastName: 'Park', email: 'lisa.park@company.com', department: 'Engineering', jobTitle: 'Frontend Developer', salary: 79000, hireDate: '2022-10-03', status: 'ACTIVE', phone: '+1-555-0111' },
+  { id: 12, firstName: 'Michael', lastName: 'Brown', email: 'michael.brown@company.com', department: 'Finance', jobTitle: 'CFO', salary: 180000, hireDate: '2017-01-10', status: 'ACTIVE', phone: '+1-555-0112' },
+];
+let nextId = 13;
+
+// Pagination & filter state
+let currentPage = 0;
+let pageSize = 8;
+let searchQuery = '';
+let filterDept = '';
+let filterStatus = '';
+let modalState = null; // null | {type: 'add'|'edit'|'delete'|'detail', data?: ...}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+const deptColors = {
+  Engineering: '#6366f1', Product: '#22c55e', Sales: '#f59e0b',
+  HR: '#ec4899', Finance: '#3b82f6', Marketing: '#a855f7'
+};
+const avatarColors = ['#6366f1','#22c55e','#f59e0b','#ec4899','#3b82f6','#a855f7','#ef4444','#06b6d4'];
+
+function getAvatarColor(name) {
+  let h = 0; for (let c of name) h = (h * 31 + c.charCodeAt(0)) & 0xff;
+  return avatarColors[h % avatarColors.length];
+}
+function initials(f, l) { return (f[0] + l[0]).toUpperCase(); }
+function fmt(salary) { return '$' + salary.toLocaleString(); }
+function statusBadge(s) {
+  const map = { ACTIVE: ['active','Active'], ON_LEAVE: ['leave','On Leave'], INACTIVE: ['inactive','Inactive'], TERMINATED: ['terminated','Terminated'] };
+  const [cls, label] = map[s] || ['inactive', s];
+  return `<span class="badge badge-${cls}"><span class="badge-dot"></span>${label}</span>`;
+}
+function deptBadge(dept) {
+  const color = deptColors[dept] || '#6366f1';
+  return `<span class="dept-badge" style="background:${color}22;color:${color}">${dept}</span>`;
+}
+function filteredEmployees() {
+  return employees.filter(e => {
+    const q = searchQuery.toLowerCase();
+    const matchSearch = !q || [e.firstName, e.lastName, e.email, e.department, e.jobTitle].some(v => v.toLowerCase().includes(q));
+    const matchDept = !filterDept || e.department === filterDept;
+    const matchStatus = !filterStatus || e.status === filterStatus;
+    return matchSearch && matchDept && matchStatus;
+  });
+}
+function pagedEmployees() {
+  const all = filteredEmployees();
+  const start = currentPage * pageSize;
+  return { items: all.slice(start, start + pageSize), total: all.length, pages: Math.ceil(all.length / pageSize) };
+}
+function getDepts() { return [...new Set(employees.map(e => e.department))].sort(); }
+function getStats() {
+  const total = employees.length;
+  const active = employees.filter(e => e.status === 'ACTIVE').length;
+  const onLeave = employees.filter(e => e.status === 'ON_LEAVE').length;
+  const deptCounts = {};
+  employees.forEach(e => { deptCounts[e.department] = (deptCounts[e.department] || 0) + 1; });
+  return { total, active, onLeave, deptCounts };
+}
+
+// ── SVG Icons ──────────────────────────────────────────────────────────────
+const icons = {
+  grid: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
+  users: '<svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  plus: '<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+  search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+  edit: '<svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+  trash: '<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+  eye: '<svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+  x: '<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+  chart: '<svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
+  book: '<svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
+  logout: '<svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>',
+  check: '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>',
+  warn: '<svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  left: '<svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>',
+  right: '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>',
+  briefcase: '<svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>',
+  mail: '<svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>',
+  phone: '<svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.08 6.08l1.97-1.97a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
+  cal: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+  dollar: '<svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+};
+
+// ── Render Engine ──────────────────────────────────────────────────────────
+function render() {
+  const app = document.getElementById('app');
+  if (!authUser) { app.innerHTML = renderLogin(); bindLogin(); return; }
+  app.innerHTML = renderApp();
+  bindApp();
+  renderCharts();
+}
+
+// ── Login ──────────────────────────────────────────────────────────────────
+function renderLogin() {
+  return `
+  <div class="auth-screen">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <div class="logo-icon">${icons.briefcase}</div>
+        <div>
+          <div class="auth-title">Employee API</div>
+          <div class="auth-sub">Management Dashboard</div>
+        </div>
+      </div>
+      <div class="auth-demo">
+        <div class="auth-demo-title">Demo credentials</div>
+        <div class="cred-row"><span class="cred-badge admin">Admin</span><span class="cred-text">admin / admin123</span><span style="font-size:10px;color:var(--text3);margin-left:auto">Full access</span></div>
+        <div class="cred-row" style="margin-bottom:0"><span class="cred-badge user">User</span><span class="cred-text">user / user123</span><span style="font-size:10px;color:var(--text3);margin-left:auto">Read only</span></div>
+      </div>
+      <div class="form-group">
+        <label>Username</label>
+        <input id="login-user" type="text" placeholder="Enter username" autocomplete="username" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input id="login-pass" type="password" placeholder="Enter password" autocomplete="current-password" />
+      </div>
+      <div id="login-err" style="color:var(--red);font-size:12.5px;margin-bottom:12px;display:none"></div>
+      <button class="btn btn-primary btn-full" id="login-btn">Sign in</button>
+      <div style="text-align:center;margin-top:14px;font-size:11.5px;color:var(--text3)">
+        Connected to <span style="color:var(--accent2);font-family:var(--mono)">Spring Boot API</span> + <span style="color:var(--accent2);font-family:var(--mono)">PostgreSQL</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+function bindLogin() {
+  const btn = document.getElementById('login-btn');
+  const doLogin = () => {
+    const u = document.getElementById('login-user').value.trim();
+    const p = document.getElementById('login-pass').value;
+    const err = document.getElementById('login-err');
+    if ((u === 'admin' && p === 'admin123') || (u === 'user' && p === 'user123')) {
+      authUser = { username: u, roles: u === 'admin' ? ['ROLE_ADMIN','ROLE_USER'] : ['ROLE_USER'] };
+      err.style.display = 'none';
+      toast(`Welcome back, ${u}!`);
+      render();
+    } else {
+      err.textContent = 'Invalid username or password';
+      err.style.display = 'block';
+    }
+  };
+  btn.onclick = doLogin;
+  document.getElementById('login-pass').onkeydown = e => e.key === 'Enter' && doLogin();
+}
+
+// ── App Shell ──────────────────────────────────────────────────────────────
+function renderApp() {
+  const isAdmin = authUser.roles.includes('ROLE_ADMIN');
+  return `
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-icon">${icons.briefcase}</div>
+        <div>
+          <div class="logo-text">Employee API</div>
+          <div class="logo-sub">Management System</div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <div class="nav-label">Overview</div>
+          <button class="nav-item ${activeView==='dashboard'?'active':''}" data-view="dashboard">${icons.grid} Dashboard</button>
+        </div>
+        <div class="nav-section">
+          <div class="nav-label">Workforce</div>
+          <button class="nav-item ${activeView==='employees'?'active':''}" data-view="employees">${icons.users} Employees <span class="nav-badge">${employees.length}</span></button>
+        </div>
+        <div class="nav-section">
+          <div class="nav-label">Developer</div>
+          <button class="nav-item ${activeView==='api'?'active':''}" data-view="api">${icons.book} API Docs</button>
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-card">
+          <div class="avatar" style="background:${isAdmin?'var(--accent)':'var(--green)'}">${authUser.username[0].toUpperCase()}</div>
+          <div class="user-info">
+            <div class="user-name">${authUser.username}</div>
+            <div class="user-role">${isAdmin ? 'Administrator' : 'Read-only user'}</div>
+          </div>
+          <button id="logout-btn" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;border-radius:5px" title="Logout">${icons.logout}</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div>
+          <div class="page-title">${pageTitle()}</div>
+          <div class="page-sub">${pageSubtitle()}</div>
+        </div>
+        <div class="topbar-actions">
+          ${activeView === 'employees' && isAdmin ? `<button class="btn btn-primary" id="add-emp-btn">${icons.plus} Add employee</button>` : ''}
+          ${!isAdmin && activeView === 'employees' ? `<span style="font-size:11.5px;color:var(--amber);background:var(--amber-bg);padding:4px 10px;border-radius:6px;display:flex;align-items:center;gap:5px">${icons.warn} Read-only mode</span>` : ''}
+        </div>
+      </div>
+      <div class="content" id="main-content">
+        ${renderView()}
+      </div>
+    </main>
+  </div>
+  ${modalState ? renderModal() : ''}`;
+}
+
+function pageTitle() {
+  return { dashboard: 'Dashboard', employees: 'Employees', api: 'API Documentation' }[activeView];
+}
+function pageSubtitle() {
+  return {
+    dashboard: 'Company overview and workforce analytics',
+    employees: `${filteredEmployees().length} of ${employees.length} employees`,
+    api: 'REST endpoints with JWT authentication'
+  }[activeView];
+}
+
+// ── Views ──────────────────────────────────────────────────────────────────
+function renderView() {
+  if (activeView === 'dashboard') return renderDashboard();
+  if (activeView === 'employees') return renderEmployees();
+  if (activeView === 'api') return renderApiDocs();
+  return '';
+}
+
+function renderDashboard() {
+  const s = getStats();
+  const maxDept = Math.max(...Object.values(s.deptCounts));
+  return `
+  <div class="stats-grid">
+    <div class="stat-card" style="--accent-color:var(--accent);--icon-bg:var(--accent-bg);--icon-color:var(--accent2)">
+      <div class="stat-icon">${icons.users}</div>
+      <div class="stat-value">${s.total}</div>
+      <div class="stat-label">Total employees</div>
+    </div>
+    <div class="stat-card" style="--accent-color:var(--green);--icon-bg:var(--green-bg);--icon-color:var(--green)">
+      <div class="stat-icon">${icons.check}</div>
+      <div class="stat-value">${s.active}</div>
+      <div class="stat-label">Active</div>
+    </div>
+    <div class="stat-card" style="--accent-color:var(--amber);--icon-bg:var(--amber-bg);--icon-color:var(--amber)">
+      <div class="stat-icon">${icons.cal}</div>
+      <div class="stat-value">${s.onLeave}</div>
+      <div class="stat-label">On leave</div>
+    </div>
+    <div class="stat-card" style="--accent-color:var(--blue);--icon-bg:var(--blue-bg);--icon-color:var(--blue)">
+      <div class="stat-icon">${icons.chart}</div>
+      <div class="stat-value">${Object.keys(s.deptCounts).length}</div>
+      <div class="stat-label">Departments</div>
+    </div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title">Headcount by department</div>
+      <div class="chart-sub">Current employee distribution</div>
+      <div class="chart-wrap"><canvas id="deptChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Average salary by department</div>
+      <div class="chart-sub">In USD</div>
+      <div class="chart-wrap"><canvas id="salaryChart"></canvas></div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card">
+      <div class="card-title" style="margin-bottom:16px">Department breakdown</div>
+      <div>
+        ${Object.entries(s.deptCounts).sort((a,b)=>b[1]-a[1]).map(([dept, count]) => `
+          <div class="dept-row">
+            <div class="dept-name">${dept}</div>
+            <div class="dept-bar-wrap"><div class="dept-bar" style="width:${(count/maxDept*100).toFixed(0)}%;background:${deptColors[dept]||'var(--accent)'}"></div></div>
+            <div class="dept-count">${count}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title" style="margin-bottom:16px">Recently hired</div>
+      <div class="recent-list">
+        ${[...employees].sort((a,b) => new Date(b.hireDate) - new Date(a.hireDate)).slice(0,5).map(e => `
+          <div class="recent-item">
+            <div class="td-avatar" style="background:${getAvatarColor(e.firstName)}22;color:${getAvatarColor(e.firstName)}">${initials(e.firstName,e.lastName)}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:500">${e.firstName} ${e.lastName}</div>
+              <div style="font-size:11.5px;color:var(--text3)">${e.jobTitle}</div>
+            </div>
+            <div style="font-size:11px;color:var(--text3)">${e.hireDate}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderEmployees() {
+  const { items, total, pages } = pagedEmployees();
+  return `
+  <div class="table-card">
+    <div class="table-header">
+      <div class="search-box">
+        ${icons.search}
+        <input type="text" id="search-inp" placeholder="Search employees…" value="${searchQuery}" />
+      </div>
+      <div class="filter-row">
+        <select id="filter-dept">
+          <option value="">All departments</option>
+          ${getDepts().map(d => `<option value="${d}" ${filterDept===d?'selected':''}>${d}</option>`).join('')}
+        </select>
+        <select id="filter-status">
+          <option value="">All status</option>
+          <option value="ACTIVE" ${filterStatus==='ACTIVE'?'selected':''}>Active</option>
+          <option value="ON_LEAVE" ${filterStatus==='ON_LEAVE'?'selected':''}>On leave</option>
+          <option value="INACTIVE" ${filterStatus==='INACTIVE'?'selected':''}>Inactive</option>
+        </select>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr>
+          <th>Employee</th><th>Department</th><th>Job title</th>
+          <th>Salary</th><th>Hire date</th><th>Status</th><th style="text-align:right">Actions</th>
+        </tr></thead>
+        <tbody>
+          ${items.length === 0 ? `<tr><td colspan="7"><div class="empty">${icons.users}<p>No employees found</p><span>Try adjusting your filters</span></div></td></tr>` :
+            items.map(e => `
+            <tr>
+              <td><div class="td-name">
+                <div class="td-avatar" style="background:${getAvatarColor(e.firstName)}22;color:${getAvatarColor(e.firstName)}">${initials(e.firstName,e.lastName)}</div>
+                <div><div class="td-main">${e.firstName} ${e.lastName}</div><div class="td-sub">${e.email}</div></div>
+              </div></td>
+              <td>${deptBadge(e.department)}</td>
+              <td style="color:var(--text2);font-size:13px">${e.jobTitle}</td>
+              <td style="font-family:var(--mono);font-size:12.5px;font-weight:500">${fmt(e.salary)}</td>
+              <td style="color:var(--text3);font-size:12.5px">${e.hireDate}</td>
+              <td>${statusBadge(e.status)}</td>
+              <td>
+                <div style="display:flex;gap:4px;justify-content:flex-end">
+                  <button class="btn btn-ghost btn-sm action-view" data-id="${e.id}" title="View">${icons.eye}</button>
+                  ${authUser.roles.includes('ROLE_ADMIN') ? `
+                    <button class="btn btn-ghost btn-sm action-edit" data-id="${e.id}" title="Edit">${icons.edit}</button>
+                    <button class="btn btn-danger btn-sm action-del" data-id="${e.id}" title="Delete">${icons.trash}</button>` : ''}
+                </div>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <div class="page-info">Showing ${Math.min(currentPage*pageSize+1,total)}–${Math.min((currentPage+1)*pageSize,total)} of ${total}</div>
+      <div class="page-btns">
+        <button class="page-btn" id="pg-prev" ${currentPage===0?'disabled':''}>${icons.left}</button>
+        ${Array.from({length:pages},(_,i)=>`<button class="page-btn ${i===currentPage?'active':''}" data-pg="${i}">${i+1}</button>`).join('')}
+        <button class="page-btn" id="pg-next" ${currentPage>=pages-1?'disabled':''}>${icons.right}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderApiDocs() {
+  const endpoints = [
+    {method:'POST', path:'/api/auth/login', desc:'Authenticate and get JWT token', auth:false},
+    {method:'POST', path:'/api/auth/register', desc:'Register a new user account', auth:false},
+    {method:'GET', path:'/api/employees', desc:'List employees — paginated, searchable, filterable', auth:true},
+    {method:'GET', path:'/api/employees/{id}', desc:'Get single employee by ID', auth:true},
+    {method:'POST', path:'/api/employees', desc:'Create a new employee record', auth:true, admin:true},
+    {method:'PUT', path:'/api/employees/{id}', desc:'Update employee details', auth:true, admin:true},
+    {method:'DELETE', path:'/api/employees/{id}', desc:'Delete an employee', auth:true, admin:true},
+    {method:'GET', path:'/api/employees/stats/dashboard', desc:'Aggregated stats and analytics', auth:true},
+    {method:'GET', path:'/api/employees/departments', desc:'List all distinct departments', auth:true},
+  ];
+  return `
+  <div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start">
+    <div>
+      <div class="section-title">${icons.book} REST Endpoints</div>
+      <div class="endpoint-list">
+        ${endpoints.map(ep => `
+          <div class="endpoint">
+            <span class="method ${ep.method.toLowerCase()}">${ep.method}</span>
+            <span class="endpoint-path">${ep.path}</span>
+            <span class="endpoint-desc">${ep.desc}</span>
+            ${ep.auth ? `<span class="endpoint-auth">JWT</span>` : ''}
+            ${ep.admin ? `<span class="endpoint-auth" style="background:var(--amber-bg);color:var(--amber)">ADMIN</span>` : ''}
+          </div>`).join('')}
+      </div>
+
+      <div style="margin-top:24px">
+        <div class="section-title">${icons.search} Query parameters</div>
+        <div class="card" style="font-family:var(--mono);font-size:12px;line-height:1.8;color:var(--text2)">
+          GET /api/employees?<span style="color:var(--accent2)">page</span>=0&<span style="color:var(--accent2)">size</span>=10&<span style="color:var(--accent2)">search</span>=sarah&<span style="color:var(--accent2)">department</span>=Engineering&<span style="color:var(--accent2)">status</span>=ACTIVE&<span style="color:var(--accent2)">sortBy</span>=salary&<span style="color:var(--accent2)">sortDir</span>=desc
+        </div>
+      </div>
+
+      <div style="margin-top:24px">
+        <div class="section-title">${icons.dollar} Example response</div>
+        <div class="card" style="font-family:var(--mono);font-size:11.5px;line-height:1.7;color:var(--text2);white-space:pre-wrap">{
+  "<span style="color:#22c55e">success</span>": true,
+  "<span style="color:#22c55e">data</span>": {
+    "<span style="color:#6366f1">content</span>": [ ... ],
+    "<span style="color:#6366f1">totalElements</span>": 12,
+    "<span style="color:#6366f1">totalPages</span>": 2,
+    "<span style="color:#6366f1">number</span>": 0
+  },
+  "<span style="color:#22c55e">timestamp</span>": "2024-01-15T10:30:00"
+}</div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card">
+        <div class="card-title" style="margin-bottom:12px">${icons.briefcase} Tech stack</div>
+        ${[
+          ['Java 17', 'Language'],
+          ['Spring Boot 3.2', 'Framework'],
+          ['Spring Security', 'Authentication'],
+          ['JWT (JJWT)', 'Token auth'],
+          ['Spring Data JPA', 'ORM'],
+          ['PostgreSQL', 'Database'],
+          ['Hibernate', 'Query engine'],
+          ['Lombok', 'Boilerplate'],
+          ['SpringDoc / Swagger', 'API docs'],
+        ].map(([name, role]) => `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12.5px">
+            <span style="font-weight:500">${name}</span>
+            <span style="color:var(--text3);font-size:11.5px">${role}</span>
+          </div>`).join('')}
+      </div>
+
+      <div class="card">
+        <div class="card-title" style="margin-bottom:12px">DB Indexes</div>
+        ${[
+          'idx_employee_email (unique)',
+          'idx_employee_department',
+          'idx_employee_last_name',
+          'idx_user_username (unique)',
+          'idx_user_email (unique)',
+        ].map(idx => `
+          <div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px;color:var(--text2)">
+            <span style="width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0"></span>${idx}
+          </div>`).join('')}
+      </div>
+
+      <div class="card">
+        <div class="card-title" style="margin-bottom:8px">Security model</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.7">
+          Stateless JWT bearer tokens. <code style="font-family:var(--mono);background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:11px">ROLE_USER</code> has read-only GET access. <code style="font-family:var(--mono);background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:11px">ROLE_ADMIN</code> can create, update, and delete. Passwords hashed with BCrypt (cost 12).
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Modals ─────────────────────────────────────────────────────────────────
+function renderModal() {
+  const { type, data } = modalState;
+  if (type === 'delete') return renderDeleteModal(data);
+  if (type === 'detail') return renderDetailModal(data);
+  return renderEmployeeFormModal(data);
+}
+
+function renderDeleteModal(emp) {
+  return `
+  <div class="modal-backdrop" id="modal-backdrop">
+    <div class="modal" style="max-width:400px">
+      <div class="modal-body" style="text-align:center;padding-top:28px">
+        <div class="confirm-icon">${icons.trash}</div>
+        <div style="font-size:16px;font-weight:600;margin-bottom:8px">Delete employee?</div>
+        <div style="font-size:13px;color:var(--text3)">This will permanently remove <strong style="color:var(--text)">${emp.firstName} ${emp.lastName}</strong> from the system. This action cannot be undone.</div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" id="modal-cancel">Cancel</button>
+        <button class="btn btn-danger" id="confirm-del">Delete employee</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderDetailModal(emp) {
+  return `
+  <div class="modal-backdrop" id="modal-backdrop">
+    <div class="modal">
+      <div class="modal-head">
+        <div>
+          <div class="modal-title">Employee details</div>
+          <div class="modal-sub">ID #${emp.id} · Member since ${emp.hireDate}</div>
+        </div>
+        <button class="modal-close" id="modal-cancel">${icons.x}</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--border)">
+          <div class="td-avatar" style="width:52px;height:52px;font-size:16px;border-radius:12px;background:${getAvatarColor(emp.firstName)}22;color:${getAvatarColor(emp.firstName)}">${initials(emp.firstName,emp.lastName)}</div>
+          <div>
+            <div style="font-size:17px;font-weight:600">${emp.firstName} ${emp.lastName}</div>
+            <div style="font-size:13px;color:var(--text3);margin-top:3px">${emp.jobTitle} · ${emp.department}</div>
+            <div style="margin-top:6px">${statusBadge(emp.status)}</div>
+          </div>
+        </div>
+        <div class="detail-grid">
+          <div class="detail-item"><label>${icons.mail} Email</label><div class="val">${emp.email}</div></div>
+          <div class="detail-item"><label>${icons.phone} Phone</label><div class="val">${emp.phone || '—'}</div></div>
+          <div class="detail-item"><label>${icons.dollar} Salary</label><div class="val" style="font-family:var(--mono);font-size:15px;color:var(--green)">${fmt(emp.salary)}</div></div>
+          <div class="detail-item"><label>${icons.cal} Hire date</label><div class="val">${emp.hireDate}</div></div>
+          <div class="detail-item"><label>${icons.briefcase} Department</label><div class="val">${deptBadge(emp.department)}</div></div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" id="modal-cancel">Close</button>
+        ${authUser.roles.includes('ROLE_ADMIN') ? `<button class="btn btn-primary" id="detail-edit-btn">Edit employee</button>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderEmployeeFormModal(emp) {
+  const isEdit = !!emp;
+  return `
+  <div class="modal-backdrop" id="modal-backdrop">
+    <div class="modal">
+      <div class="modal-head">
+        <div>
+          <div class="modal-title">${isEdit ? 'Edit employee' : 'Add new employee'}</div>
+          <div class="modal-sub">${isEdit ? `Editing ${emp.firstName} ${emp.lastName}` : 'Fill in the employee details below'}</div>
+        </div>
+        <button class="modal-close" id="modal-cancel">${icons.x}</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>First name *</label>
+            <input id="f-fname" placeholder="Sarah" value="${emp?.firstName||''}" />
+          </div>
+          <div class="form-group">
+            <label>Last name *</label>
+            <input id="f-lname" placeholder="Johnson" value="${emp?.lastName||''}" />
+          </div>
+          <div class="form-group form-full">
+            <label>Email *</label>
+            <input id="f-email" type="email" placeholder="sarah@company.com" value="${emp?.email||''}" />
+          </div>
+          <div class="form-group">
+            <label>Department *</label>
+            <select id="f-dept">
+              ${['Engineering','Product','Sales','HR','Finance','Marketing','Operations'].map(d=>`<option value="${d}" ${(emp?.department||'Engineering')===d?'selected':''}>${d}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Job title *</label>
+            <input id="f-title" placeholder="Software Engineer" value="${emp?.jobTitle||''}" />
+          </div>
+          <div class="form-group">
+            <label>Salary (USD) *</label>
+            <input id="f-salary" type="number" placeholder="75000" value="${emp?.salary||''}" min="0" />
+          </div>
+          <div class="form-group">
+            <label>Hire date *</label>
+            <input id="f-hire" type="date" value="${emp?.hireDate||new Date().toISOString().split('T')[0]}" />
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select id="f-status">
+              <option value="ACTIVE" ${(emp?.status||'ACTIVE')==='ACTIVE'?'selected':''}>Active</option>
+              <option value="ON_LEAVE" ${emp?.status==='ON_LEAVE'?'selected':''}>On leave</option>
+              <option value="INACTIVE" ${emp?.status==='INACTIVE'?'selected':''}>Inactive</option>
+              <option value="TERMINATED" ${emp?.status==='TERMINATED'?'selected':''}>Terminated</option>
+            </select>
+          </div>
+          <div class="form-group form-full">
+            <label>Phone</label>
+            <input id="f-phone" placeholder="+1-555-0100" value="${emp?.phone||''}" />
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" id="modal-cancel">Cancel</button>
+        <button class="btn btn-primary" id="modal-save">${isEdit ? 'Save changes' : 'Add employee'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Charts ─────────────────────────────────────────────────────────────────
+function renderCharts() {
+  if (activeView !== 'dashboard') return;
+  const s = getStats();
+  const depts = Object.keys(s.deptCounts);
+  const colors = depts.map(d => deptColors[d] || '#6366f1');
+
+  const avgSalaries = depts.map(dept => {
+    const emps = employees.filter(e => e.department === dept);
+    return Math.round(emps.reduce((a, e) => a + e.salary, 0) / emps.length);
+  });
+
+  const chartDefaults = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+  };
+
+  new Chart(document.getElementById('deptChart'), {
+    type: 'bar',
+    data: {
+      labels: depts,
+      datasets: [{ data: depts.map(d => s.deptCounts[d]), backgroundColor: colors.map(c => c + '99'), borderColor: colors, borderWidth: 2, borderRadius: 6 }]
+    },
+    options: { ...chartDefaults, scales: { x: { ticks: { color: '#5a6272', font: { size: 11 } }, grid: { display: false } }, y: { ticks: { color: '#5a6272', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.04)' } } } }
+  });
+
+  new Chart(document.getElementById('salaryChart'), {
+    type: 'bar',
+    data: {
+      labels: depts,
+      datasets: [{ data: avgSalaries, backgroundColor: colors.map(c => c + '55'), borderColor: colors, borderWidth: 2, borderRadius: 6 }]
+    },
+    options: { ...chartDefaults, scales: { x: { ticks: { color: '#5a6272', font: { size: 11 } }, grid: { display: false } }, y: { ticks: { color: '#5a6272', font: { size: 11 }, callback: v => '$' + (v/1000).toFixed(0) + 'k' }, grid: { color: 'rgba(255,255,255,0.04)' } } } }
+  });
+}
+
+// ── Event Binding ──────────────────────────────────────────────────────────
+function bindApp() {
+  // Nav
+  document.querySelectorAll('[data-view]').forEach(btn => {
+    btn.onclick = () => { activeView = btn.dataset.view; render(); };
+  });
+
+  // Logout
+  document.getElementById('logout-btn').onclick = () => { authUser = null; render(); };
+
+  // Add employee
+  const addBtn = document.getElementById('add-emp-btn');
+  if (addBtn) addBtn.onclick = () => { modalState = { type: 'add', data: null }; render(); bindModal(); };
+
+  // Search & filter
+  const si = document.getElementById('search-inp');
+  if (si) si.oninput = e => { searchQuery = e.target.value; currentPage = 0; render(); bindApp(); };
+
+  const fd = document.getElementById('filter-dept');
+  if (fd) fd.onchange = e => { filterDept = e.target.value; currentPage = 0; render(); bindApp(); };
+
+  const fs = document.getElementById('filter-status');
+  if (fs) fs.onchange = e => { filterStatus = e.target.value; currentPage = 0; render(); bindApp(); };
+
+  // Table actions
+  document.querySelectorAll('.action-view').forEach(btn => {
+    btn.onclick = () => { const emp = employees.find(e => e.id == btn.dataset.id); modalState = { type: 'detail', data: emp }; render(); bindModal(); };
+  });
+  document.querySelectorAll('.action-edit').forEach(btn => {
+    btn.onclick = () => { const emp = employees.find(e => e.id == btn.dataset.id); modalState = { type: 'edit', data: emp }; render(); bindModal(); };
+  });
+  document.querySelectorAll('.action-del').forEach(btn => {
+    btn.onclick = () => { const emp = employees.find(e => e.id == btn.dataset.id); modalState = { type: 'delete', data: emp }; render(); bindModal(); };
+  });
+
+  // Pagination
+  document.getElementById('pg-prev')?.addEventListener('click', () => { currentPage--; render(); bindApp(); });
+  document.getElementById('pg-next')?.addEventListener('click', () => { currentPage++; render(); bindApp(); });
+  document.querySelectorAll('[data-pg]').forEach(btn => {
+    btn.onclick = () => { currentPage = parseInt(btn.dataset.pg); render(); bindApp(); };
+  });
+}
+
+function bindModal() {
+  document.querySelectorAll('#modal-cancel, #modal-backdrop').forEach(el => {
+    el.onclick = (e) => { if (e.target === el) { modalState = null; render(); bindApp(); } };
+  });
+
+  document.querySelector('.modal')?.addEventListener('click', e => e.stopPropagation());
+
+  const saveBtn = document.getElementById('modal-save');
+  if (saveBtn) saveBtn.onclick = saveEmployee;
+
+  const delBtn = document.getElementById('confirm-del');
+  if (delBtn) delBtn.onclick = deleteEmployee;
+
+  const editBtn = document.getElementById('detail-edit-btn');
+  if (editBtn) editBtn.onclick = () => { modalState = { type: 'edit', data: modalState.data }; render(); bindModal(); };
+}
+
+function saveEmployee() {
+  const get = id => document.getElementById(id)?.value?.trim();
+  const firstName = get('f-fname'), lastName = get('f-lname'), email = get('f-email');
+  const department = get('f-dept'), jobTitle = get('f-title'), salary = parseFloat(get('f-salary'));
+  const hireDate = get('f-hire'), status = get('f-status'), phone = get('f-phone');
+
+  if (!firstName || !lastName || !email || !department || !jobTitle || !salary || !hireDate) {
+    toast('Please fill in all required fields', 'error'); return;
+  }
+  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRe.test(email)) { toast('Please enter a valid email', 'error'); return; }
+
+  const isEdit = modalState.type === 'edit';
+  if (isEdit) {
+    const idx = employees.findIndex(e => e.id === modalState.data.id);
+    employees[idx] = { ...employees[idx], firstName, lastName, email, department, jobTitle, salary, hireDate, status, phone };
+    toast(`${firstName} ${lastName} updated`);
+  } else {
+    if (employees.some(e => e.email === email)) { toast('Email already in use', 'error'); return; }
+    employees.push({ id: nextId++, firstName, lastName, email, department, jobTitle, salary, hireDate, status, phone });
+    toast(`${firstName} ${lastName} added`);
+  }
+  modalState = null; render(); bindApp();
+}
+
+function deleteEmployee() {
+  const { data } = modalState;
+  employees = employees.filter(e => e.id !== data.id);
+  toast(`${data.firstName} ${data.lastName} deleted`);
+  modalState = null; render(); bindApp();
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
